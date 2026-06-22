@@ -103,7 +103,7 @@ TENANT_NAME="<your-tenant-name>"
 # SETTINGS_FILE="/etc/tfy/base-settings.json"
 
 BINARY_PATH="/usr/local/bin/tfy-local-ai-setup"
-RELEASE_TAG="v1.0.0"
+RELEASE_TAG="v1.0.1"
 RELEASE_BASE="https://github.com/truefoundry/tfy-local-ai-setup/releases/download/${RELEASE_TAG}"
 VERSION_FILE="${BINARY_PATH}.version"
 
@@ -166,7 +166,7 @@ TENANT_NAME="<your-tenant-name>"
 # SETTINGS_FILE="/etc/tfy/base-settings.json"
 
 BINARY_PATH="/usr/local/bin/tfy-local-ai-setup"
-RELEASE_TAG="v1.0.0"
+RELEASE_TAG="v1.0.1"
 BINARY_URL="https://github.com/truefoundry/tfy-local-ai-setup/releases/download/${RELEASE_TAG}/tfy-local-ai-setup-linux-amd64"
 VERSION_FILE="${BINARY_PATH}.version"
 
@@ -224,7 +224,7 @@ $TenantName      = "<your-tenant-name>"
 
 $BinaryDir   = "C:\Program Files\TrueFoundry"
 $BinaryPath  = "$BinaryDir\tfy-local-ai-setup.exe"
-$ReleaseTag  = "v1.0.0"
+$ReleaseTag  = "v1.0.1"
 $BinaryUrl   = "https://github.com/truefoundry/tfy-local-ai-setup/releases/download/$ReleaseTag/tfy-local-ai-setup-windows-amd64.exe"
 $VersionFile = "$BinaryPath.version"
 
