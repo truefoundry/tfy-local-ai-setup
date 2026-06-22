@@ -65,6 +65,46 @@ tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 | `--settings-file` | No | — | Path to a JSON file to use as the base for `managed-settings.json`. The binary patches only the token and model IDs into it; all other keys are preserved. If omitted, the binary falls back to the existing file on disk, then the built-in default config. |
 | `--dry-run` | No | `false` | Print the resulting JSON to stdout instead of writing or locking any file. Useful for testing config before deploying. |
 
+### Default config
+
+When no `--settings-file` is provided and no `managed-settings.json` exists on disk, the binary writes the following config. Model IDs use the flag defaults unless overridden.
+
+```json
+{
+  "permissions": {
+    "disableBypassPermissionsMode": "disable",
+    "deny": [
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/.ssh/**)",
+      "Read(**/credentials/**)"
+    ],
+    "ask": ["Bash(git push:*)", "Write(**)"]
+  },
+  "allowManagedPermissionRulesOnly": true,
+  "allowManagedHooksOnly": true,
+  "transcriptRetentionDays": 14,
+  "sandbox": {
+    "enabled": true,
+    "network": { "httpProxyPort": 8080, "socksProxyPort": 8081 }
+  },
+  "strictKnownMarketplaces": [],
+  "env": {
+    "ANTHROPIC_BASE_URL": "<value of --gateway>",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-code/claude-opus",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-code/claude-sonnet",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-code/claude-haiku",
+    "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
+    "ANTHROPIC_CUSTOM_HEADERS": "X-TFY-API-KEY: <token>"
+  }
+}
+```
+
+Use `--dry-run` to inspect the exact output before deploying to a fleet.
+
 ### Exit codes
 
 | Code | Meaning |
