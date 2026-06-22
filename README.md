@@ -59,9 +59,9 @@ tfy-mdm-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 | `--url` | **Yes** | — | Base URL of the TrueFoundry control plane (e.g. `https://app.example.truefoundry.com`) |
 | `--tenant` | **Yes** | — | Your TrueFoundry tenant name |
 | `--gateway` | No | value of `--url` | Gateway URL written to `ANTHROPIC_BASE_URL` in the settings file. Set this if your gateway URL differs from the control plane URL. |
-| `--opus-model` | No | `claude-code/claude-opus` | Virtual model ID written to `ANTHROPIC_DEFAULT_OPUS_MODEL` |
-| `--sonnet-model` | No | `claude-code/claude-sonnet` | Virtual model ID written to `ANTHROPIC_DEFAULT_SONNET_MODEL` |
-| `--haiku-model` | No | `claude-code/claude-haiku` | Virtual model ID written to `ANTHROPIC_DEFAULT_HAIKU_MODEL` |
+| `--opus-model` | No | `claude-code/claude-opus` | Model ID written to `ANTHROPIC_DEFAULT_OPUS_MODEL` — can be a direct provider model or a virtual model |
+| `--sonnet-model` | No | `claude-code/claude-sonnet` | Model ID written to `ANTHROPIC_DEFAULT_SONNET_MODEL` — can be a direct provider model or a virtual model |
+| `--haiku-model` | No | `claude-code/claude-haiku` | Model ID written to `ANTHROPIC_DEFAULT_HAIKU_MODEL` — can be a direct provider model or a virtual model |
 | `--settings-file` | No | — | Path to a JSON file to use as the base for `managed-settings.json`. The binary patches only the token and model IDs into it; all other keys are preserved. If omitted, the binary falls back to the existing file on disk, then the built-in default config. |
 | `--dry-run` | No | `false` | Print the resulting JSON to stdout instead of writing or locking any file. Useful for testing config before deploying. |
 
@@ -94,7 +94,7 @@ GATEWAY_URL="<your-gateway-url>"
 CONTROL_PLANE_URL="<your-control-plane-url>"
 TENANT_NAME="<your-tenant-name>"
 
-# Optional: override model IDs (defaults shown below — change for Claude Enterprise or virtual models)
+# Optional: override model IDs (defaults shown below — can be a direct provider model or a virtual model)
 # OPUS_MODEL="claude-code/claude-opus"
 # SONNET_MODEL="claude-code/claude-sonnet"
 # HAIKU_MODEL="claude-code/claude-haiku"
@@ -301,9 +301,9 @@ sudo /usr/local/bin/tfy-mdm-setup \
 
 ---
 
-## Using Claude Enterprise model IDs
+## Using custom model IDs
 
-If your TrueFoundry deployment is backed by a Claude Enterprise account rather than a direct API key, the model IDs assigned by TrueFoundry will differ from the defaults. Pass them via the model flags:
+The default model IDs (`claude-code/claude-opus` etc.) work for standard TrueFoundry deployments. If your setup uses different model IDs — for example a direct provider model, a Claude Enterprise account, or a virtual model — pass them via the model flags:
 
 ```bash
 sudo /usr/local/bin/tfy-mdm-setup \
@@ -315,7 +315,7 @@ sudo /usr/local/bin/tfy-mdm-setup \
   --haiku-model="claude-enterprise/claude-haiku-4-5"
 ```
 
-Copy the exact model IDs from **Integrations → Providers** in the TrueFoundry control plane after creating your Anthropic provider.
+Copy the exact model IDs from **Integrations → Providers** or **Virtual Models** in the TrueFoundry control plane.
 
 ---
 
