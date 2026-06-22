@@ -2,7 +2,7 @@
 
 Tools for deploying TrueFoundry-managed Claude Code on developer machines via MDM (Mobile Device Management).
 
-## tfy-mdm-setup
+## tfy-local-ai-setup
 
 A single binary that handles everything needed to configure Claude Code on a managed machine: authenticates the logged-in developer with TrueFoundry, builds the appropriate `managed-settings.json`, and locks it so it cannot be modified by developers. Designed to run on a schedule (hourly) via Jamf, Mosyle, Kandji, Intune, SCCM, or any MDM that supports script execution.
 
@@ -31,15 +31,15 @@ Pre-built binaries for all supported platforms are in `bin/`:
 
 | File | Platform |
 |------|----------|
-| `bin/tfy-mdm-setup-darwin-arm64` | macOS — Apple Silicon (M1/M2/M3/M4) |
-| `bin/tfy-mdm-setup-darwin-amd64` | macOS — Intel |
-| `bin/tfy-mdm-setup-linux-amd64` | Linux — x86_64 |
-| `bin/tfy-mdm-setup-windows-amd64.exe` | Windows — x86_64 |
+| `bin/tfy-local-ai-setup-darwin-arm64` | macOS — Apple Silicon (M1/M2/M3/M4) |
+| `bin/tfy-local-ai-setup-darwin-amd64` | macOS — Intel |
+| `bin/tfy-local-ai-setup-linux-amd64` | Linux — x86_64 |
+| `bin/tfy-local-ai-setup-windows-amd64.exe` | Windows — x86_64 |
 
 On macOS and Linux you need to make the binary executable before running:
 
 ```bash
-chmod +x bin/tfy-mdm-setup-darwin-arm64
+chmod +x bin/tfy-local-ai-setup-darwin-arm64
 ```
 
 ---
@@ -49,7 +49,7 @@ chmod +x bin/tfy-mdm-setup-darwin-arm64
 Must be run as **root** on macOS/Linux or **Administrator** on Windows.
 
 ```
-tfy-mdm-setup --url <control-plane-url> --tenant <tenant-name> [flags]
+tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 ```
 
 ### Flags
@@ -102,7 +102,7 @@ TENANT_NAME="<your-tenant-name>"
 # Optional: path to a JSON template to use as base config
 # SETTINGS_FILE="/etc/tfy/base-settings.json"
 
-BINARY_PATH="/usr/local/bin/tfy-mdm-setup"
+BINARY_PATH="/usr/local/bin/tfy-local-ai-setup"
 RELEASE_TAG="v1.0.0"
 RELEASE_BASE="https://github.com/truefoundry/tfy-local-ai-setup/releases/download/${RELEASE_TAG}"
 VERSION_FILE="${BINARY_PATH}.version"
@@ -116,16 +116,16 @@ INSTALLED_TAG="$([[ -f "${VERSION_FILE}" ]] && cat "${VERSION_FILE}" || echo '')
 
 if [[ ! -f "${BINARY_PATH}" ]] || [[ "${INSTALLED_TAG}" != "${RELEASE_TAG}" ]]; then
   case "$(uname -m)" in
-    arm64)  BINARY_URL="${RELEASE_BASE}/tfy-mdm-setup-darwin-arm64" ;;
-    x86_64) BINARY_URL="${RELEASE_BASE}/tfy-mdm-setup-darwin-amd64" ;;
+    arm64)  BINARY_URL="${RELEASE_BASE}/tfy-local-ai-setup-darwin-arm64" ;;
+    x86_64) BINARY_URL="${RELEASE_BASE}/tfy-local-ai-setup-darwin-amd64" ;;
     *) echo "ERROR: Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
   esac
-  log "Installing tfy-mdm-setup ${RELEASE_TAG} ($(uname -m))..."
+  log "Installing tfy-local-ai-setup ${RELEASE_TAG} ($(uname -m))..."
   curl -fsSL "${BINARY_URL}" -o "${BINARY_PATH}" && chmod +x "${BINARY_PATH}"
   echo "${RELEASE_TAG}" > "${VERSION_FILE}"
-  log "tfy-mdm-setup installed at ${BINARY_PATH}."
+  log "tfy-local-ai-setup installed at ${BINARY_PATH}."
 else
-  log "tfy-mdm-setup ${RELEASE_TAG} already installed — skipping download."
+  log "tfy-local-ai-setup ${RELEASE_TAG} already installed — skipping download."
 fi
 
 # ---------------------------------------------------------------------------
@@ -165,9 +165,9 @@ TENANT_NAME="<your-tenant-name>"
 # Optional: path to a JSON template
 # SETTINGS_FILE="/etc/tfy/base-settings.json"
 
-BINARY_PATH="/usr/local/bin/tfy-mdm-setup"
+BINARY_PATH="/usr/local/bin/tfy-local-ai-setup"
 RELEASE_TAG="v1.0.0"
-BINARY_URL="https://github.com/truefoundry/tfy-local-ai-setup/releases/download/${RELEASE_TAG}/tfy-mdm-setup-linux-amd64"
+BINARY_URL="https://github.com/truefoundry/tfy-local-ai-setup/releases/download/${RELEASE_TAG}/tfy-local-ai-setup-linux-amd64"
 VERSION_FILE="${BINARY_PATH}.version"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
@@ -178,12 +178,12 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 INSTALLED_TAG="$([[ -f "${VERSION_FILE}" ]] && cat "${VERSION_FILE}" || echo '')"
 
 if [[ ! -f "${BINARY_PATH}" ]] || [[ "${INSTALLED_TAG}" != "${RELEASE_TAG}" ]]; then
-  log "Installing tfy-mdm-setup ${RELEASE_TAG} (linux-amd64)..."
+  log "Installing tfy-local-ai-setup ${RELEASE_TAG} (linux-amd64)..."
   curl -fsSL "${BINARY_URL}" -o "${BINARY_PATH}" && chmod +x "${BINARY_PATH}"
   echo "${RELEASE_TAG}" > "${VERSION_FILE}"
-  log "tfy-mdm-setup installed at ${BINARY_PATH}."
+  log "tfy-local-ai-setup installed at ${BINARY_PATH}."
 else
-  log "tfy-mdm-setup ${RELEASE_TAG} already installed — skipping download."
+  log "tfy-local-ai-setup ${RELEASE_TAG} already installed — skipping download."
 fi
 
 # ---------------------------------------------------------------------------
@@ -223,9 +223,9 @@ $TenantName      = "<your-tenant-name>"
 # $SettingsFile = "C:\ProgramData\TrueFoundry\base-settings.json"
 
 $BinaryDir   = "C:\Program Files\TrueFoundry"
-$BinaryPath  = "$BinaryDir\tfy-mdm-setup.exe"
+$BinaryPath  = "$BinaryDir\tfy-local-ai-setup.exe"
 $ReleaseTag  = "v1.0.0"
-$BinaryUrl   = "https://github.com/truefoundry/tfy-local-ai-setup/releases/download/$ReleaseTag/tfy-mdm-setup-windows-amd64.exe"
+$BinaryUrl   = "https://github.com/truefoundry/tfy-local-ai-setup/releases/download/$ReleaseTag/tfy-local-ai-setup-windows-amd64.exe"
 $VersionFile = "$BinaryPath.version"
 
 function Write-Log {
@@ -239,13 +239,13 @@ function Write-Log {
 $InstalledTag = if (Test-Path $VersionFile) { (Get-Content $VersionFile -Raw).Trim() } else { "" }
 
 if (-not (Test-Path $BinaryPath) -or $InstalledTag -ne $ReleaseTag) {
-  Write-Log "Installing tfy-mdm-setup $ReleaseTag (windows-amd64)..."
+  Write-Log "Installing tfy-local-ai-setup $ReleaseTag (windows-amd64)..."
   if (-not (Test-Path $BinaryDir)) { New-Item -ItemType Directory -Path $BinaryDir | Out-Null }
   Invoke-WebRequest -Uri $BinaryUrl -OutFile $BinaryPath -UseBasicParsing
   Set-Content -Path $VersionFile -Value $ReleaseTag
-  Write-Log "tfy-mdm-setup installed at $BinaryPath."
+  Write-Log "tfy-local-ai-setup installed at $BinaryPath."
 } else {
-  Write-Log "tfy-mdm-setup $ReleaseTag already installed — skipping download."
+  Write-Log "tfy-local-ai-setup $ReleaseTag already installed — skipping download."
 }
 
 # ---------------------------------------------------------------------------
@@ -268,13 +268,13 @@ If you need to trigger setup outside the MDM schedule — for example, to comple
 
 ```bash
 # macOS (Apple Silicon)
-sudo /usr/local/bin/tfy-mdm-setup \
+sudo /usr/local/bin/tfy-local-ai-setup \
   --url="https://app.example.truefoundry.com" \
   --tenant="myorg" \
   --gateway="https://gateway.example.truefoundry.com"
 
 # Linux
-sudo /usr/local/bin/tfy-mdm-setup \
+sudo /usr/local/bin/tfy-local-ai-setup \
   --url="https://app.example.truefoundry.com" \
   --tenant="myorg" \
   --gateway="https://gateway.example.truefoundry.com"
@@ -282,7 +282,7 @@ sudo /usr/local/bin/tfy-mdm-setup \
 
 ```powershell
 # Windows (PowerShell as Administrator)
-& "C:\Program Files\TrueFoundry\tfy-mdm-setup.exe" `
+& "C:\Program Files\TrueFoundry\tfy-local-ai-setup.exe" `
   --url="https://app.example.truefoundry.com" `
   --tenant="myorg" `
   --gateway="https://gateway.example.truefoundry.com"
@@ -293,7 +293,7 @@ sudo /usr/local/bin/tfy-mdm-setup \
 Use `--dry-run` to inspect the JSON that would be written without touching the filesystem — useful for validating config before a fleet rollout:
 
 ```bash
-sudo /usr/local/bin/tfy-mdm-setup \
+sudo /usr/local/bin/tfy-local-ai-setup \
   --url="https://app.example.truefoundry.com" \
   --tenant="myorg" \
   --dry-run
@@ -306,7 +306,7 @@ sudo /usr/local/bin/tfy-mdm-setup \
 The default model IDs (`claude-code/claude-opus` etc.) work for standard TrueFoundry deployments. If your setup uses different model IDs — for example a direct provider model, a Claude Enterprise account, or a virtual model — pass them via the model flags:
 
 ```bash
-sudo /usr/local/bin/tfy-mdm-setup \
+sudo /usr/local/bin/tfy-local-ai-setup \
   --url="https://app.example.truefoundry.com" \
   --tenant="myorg" \
   --gateway="https://gateway.example.truefoundry.com" \
@@ -324,7 +324,7 @@ Copy the exact model IDs from **Integrations → Providers** or **Virtual Models
 If you need to deploy settings beyond what the built-in default config provides (additional `deny` rules, `allowedMcpServers`, etc.), put your full desired config in a JSON file and pass it via `--settings-file`. The binary will read it as the base, then inject the token and model IDs:
 
 ```bash
-sudo /usr/local/bin/tfy-mdm-setup \
+sudo /usr/local/bin/tfy-local-ai-setup \
   --url="https://app.example.truefoundry.com" \
   --tenant="myorg" \
   --settings-file="/etc/tfy/base-settings.json"
@@ -380,11 +380,11 @@ Requires Go 1.24+. No external dependencies — stdlib only.
 git clone https://github.com/truefoundry/tfy-local-ai-setup.git
 
 # Native build
-go build -o tfy-mdm-setup main.go
+go build -o tfy-local-ai-setup main.go
 
 # Cross-compile all platforms
-GOOS=darwin  GOARCH=arm64 go build -o bin/tfy-mdm-setup-darwin-arm64       main.go
-GOOS=darwin  GOARCH=amd64 go build -o bin/tfy-mdm-setup-darwin-amd64       main.go
-GOOS=linux   GOARCH=amd64 go build -o bin/tfy-mdm-setup-linux-amd64        main.go
-GOOS=windows GOARCH=amd64 go build -o bin/tfy-mdm-setup-windows-amd64.exe  main.go
+GOOS=darwin  GOARCH=arm64 go build -o bin/tfy-local-ai-setup-darwin-arm64       main.go
+GOOS=darwin  GOARCH=amd64 go build -o bin/tfy-local-ai-setup-darwin-amd64       main.go
+GOOS=linux   GOARCH=amd64 go build -o bin/tfy-local-ai-setup-linux-amd64        main.go
+GOOS=windows GOARCH=amd64 go build -o bin/tfy-local-ai-setup-windows-amd64.exe  main.go
 ```
