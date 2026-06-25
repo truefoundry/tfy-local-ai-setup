@@ -58,12 +58,14 @@ tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 |------|----------|---------|-------------|
 | `--url` | **Yes** | — | Base URL of the TrueFoundry control plane (e.g. `https://app.example.truefoundry.com`) |
 | `--tenant` | **Yes** | — | Your TrueFoundry tenant name |
-| `--gateway` | No | value of `--url` | Gateway URL written to `ANTHROPIC_BASE_URL` in the settings file. Set this if your gateway URL differs from the control plane URL. |
-| `--opus-model` | No | `claude-code/claude-opus` | Model ID written to `ANTHROPIC_DEFAULT_OPUS_MODEL` — can be a direct provider model or a virtual model |
-| `--sonnet-model` | No | `claude-code/claude-sonnet` | Model ID written to `ANTHROPIC_DEFAULT_SONNET_MODEL` — can be a direct provider model or a virtual model |
-| `--haiku-model` | No | `claude-code/claude-haiku` | Model ID written to `ANTHROPIC_DEFAULT_HAIKU_MODEL` — can be a direct provider model or a virtual model |
-| `--settings-file` | No | — | Path to a JSON file to use as the base for `managed-settings.json`. The binary patches only the token and model IDs into it; all other keys are preserved. If omitted, the binary falls back to the existing file on disk, then the built-in default config. |
-| `--dry-run` | No | `false` | Print the resulting JSON to stdout instead of writing or locking any file. Useful for testing config before deploying. |
+| `--gateway` | No | value of `--url` | Gateway URL. For Claude Code: written to `ANTHROPIC_BASE_URL`. For Codex: written to `base_url` in the provider config. |
+| `--claude-code` | No | auto-detect | Configure Claude Code managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
+| `--codex` | No | auto-detect | Configure Codex managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
+| `--opus-model` | No | `claude-code/claude-opus` | Model ID written to `ANTHROPIC_DEFAULT_OPUS_MODEL` (Claude Code only) |
+| `--sonnet-model` | No | `claude-code/claude-sonnet` | Model ID written to `ANTHROPIC_DEFAULT_SONNET_MODEL` (Claude Code only) |
+| `--haiku-model` | No | `claude-code/claude-haiku` | Model ID written to `ANTHROPIC_DEFAULT_HAIKU_MODEL` (Claude Code only) |
+| `--settings-file` | No | — | Path to a JSON template for `managed-settings.json` (Claude Code only). Patches token and model IDs; all other keys are preserved. Falls back to the existing file on disk, then the built-in default. |
+| `--dry-run` | No | `false` | Print the resulting config to stdout instead of writing any files. Works for both Claude Code and Codex. |
 
 ### Default config
 
@@ -104,6 +106,29 @@ When no `--settings-file` is provided and no `managed-settings.json` exists on d
 ```
 
 Use `--dry-run` to inspect the exact output before deploying to a fleet.
+
+### Codex default config
+
+When `--codex` is set (or Codex is auto-detected), the binary writes `/etc/codex/config.toml` with just the provider section. Model selection and all other settings come from the user's own config or a separately managed `requirements.toml`.
+
+```toml
+model_provider = "truefoundry"
+
+[model_providers.truefoundry]
+name     = "TrueFoundry Gateway"
+base_url = "<value of --gateway>"
+wire_api = "responses"
+
+[model_providers.truefoundry.http_headers]
+Authorization = "Bearer <token>"
+```
+
+**Codex config paths:**
+
+| OS | Path |
+|----|------|
+| macOS + Linux | `/etc/codex/config.toml` |
+| Windows | Not supported (no system-level config path) |
 
 ### Exit codes
 
