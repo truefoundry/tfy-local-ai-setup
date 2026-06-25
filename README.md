@@ -61,7 +61,7 @@ tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 | `--claude-code` | No | auto-detect | Configure Claude Code managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
 | `--codex` | No | auto-detect | Configure Codex managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
 | `--claude-gateway` | No | value of `--url` | Gateway URL for Claude Code (written to `ANTHROPIC_BASE_URL`). Defaults to `--url` if not set. |
-| `--codex-gateway` | No | value of `--claude-gateway` | Gateway URL for Codex (written to `base_url` in the provider config). Defaults to `--claude-gateway`. |
+| `--codex-gateway` | No | value of `--gateway` | Gateway URL for Codex (written to `base_url` in the provider config). Defaults to `--gateway`. |
 | `--opus-model` | No | `claude-code/claude-opus` | Model ID written to `ANTHROPIC_DEFAULT_OPUS_MODEL` (Claude Code only) |
 | `--sonnet-model` | No | `claude-code/claude-sonnet` | Model ID written to `ANTHROPIC_DEFAULT_SONNET_MODEL` (Claude Code only) |
 | `--haiku-model` | No | `claude-code/claude-haiku` | Model ID written to `ANTHROPIC_DEFAULT_HAIKU_MODEL` (Claude Code only) |
