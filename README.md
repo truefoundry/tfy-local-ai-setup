@@ -58,6 +58,7 @@ tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 |------|----------|---------|-------------|
 | `--url` | **Yes** | — | Base URL of the TrueFoundry control plane (e.g. `https://app.example.truefoundry.com`) |
 | `--tenant` | **Yes** | — | Your TrueFoundry tenant name |
+| `--gateway` | No | value of `--url` | Common gateway URL for all tools. Used as the default for `--claude-gateway` and `--codex-gateway` if neither is set. |
 | `--claude-code` | No | auto-detect | Configure Claude Code managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
 | `--codex` | No | auto-detect | Configure Codex managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
 | `--claude-gateway` | No | value of `--url` | Gateway URL for Claude Code (written to `ANTHROPIC_BASE_URL`). Defaults to `--url` if not set. |
