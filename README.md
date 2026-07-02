@@ -11,7 +11,7 @@ A single binary that handles everything needed to configure Claude Code on a man
 On every run the binary does four things:
 
 1. **Detects the logged-in user** — platform-specific: `scutil` on macOS, `SUDO_USER`/`logname` on Linux, WMI on Windows.
-2. **Gets a fresh auth token** — attempts a silent refresh from `~/.tfy-refresh-token`. If the token is missing or expired, opens the browser device-authorization flow in the user's session. After the first login, subsequent runs complete silently.
+2. **Gets a fresh auth token** — attempts a silent refresh from `~/.tf/refresh-token`. If the token is missing or expired, opens the browser device-authorization flow in the user's session. After the first login, subsequent runs complete silently. The obtained access token and refresh token are stored under `~/.tf/`.
 3. **Writes `managed-settings.json`** — injects `ANTHROPIC_BASE_URL`, model IDs, and the token into `ANTHROPIC_CUSTOM_HEADERS`. If a file already exists on disk (or a `--settings-file` template is provided), it is patched in-place — all other keys are preserved. If there is no existing file, a secure default config is written.
 4. **Locks the file** — `chflags schg` on macOS, `chattr +i` on Linux, `icacls` ACL on Windows. Developers cannot modify the file without root/Administrator access.
 
@@ -58,12 +58,18 @@ tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 |------|----------|---------|-------------|
 | `--url` | **Yes** | — | Base URL of the TrueFoundry control plane (e.g. `https://app.example.truefoundry.com`) |
 | `--tenant` | **Yes** | — | Your TrueFoundry tenant name |
-| `--gateway` | No | value of `--url` | Gateway URL written to `ANTHROPIC_BASE_URL` in the settings file. Set this if your gateway URL differs from the control plane URL. |
-| `--opus-model` | No | `claude-code/claude-opus` | Model ID written to `ANTHROPIC_DEFAULT_OPUS_MODEL` — can be a direct provider model or a virtual model |
-| `--sonnet-model` | No | `claude-code/claude-sonnet` | Model ID written to `ANTHROPIC_DEFAULT_SONNET_MODEL` — can be a direct provider model or a virtual model |
-| `--haiku-model` | No | `claude-code/claude-haiku` | Model ID written to `ANTHROPIC_DEFAULT_HAIKU_MODEL` — can be a direct provider model or a virtual model |
-| `--settings-file` | No | — | Path to a JSON file to use as the base for `managed-settings.json`. The binary patches only the token and model IDs into it; all other keys are preserved. If omitted, the binary falls back to the existing file on disk, then the built-in default config. |
-| `--dry-run` | No | `false` | Print the resulting JSON to stdout instead of writing or locking any file. Useful for testing config before deploying. |
+| `--gateway` | No | value of `--url` | Common gateway URL for all tools. Used as the default for `--claude-gateway` and `--codex-gateway` if neither is set. |
+| `--claude-code` | No | auto-detect | Configure Claude Code managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
+| `--codex` | No | auto-detect | Configure Codex managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
+| `--claude-gateway` | No | value of `--gateway` | Gateway URL for Claude Code (written to `ANTHROPIC_BASE_URL`). Overrides `--gateway` for Claude Code only. |
+| `--codex-gateway` | No | value of `--gateway` | Gateway URL for Codex (written to `base_url` in the provider config). Defaults to `--gateway`. |
+| `--opus-model` | No | `claude-code/claude-opus` | Model ID written to `ANTHROPIC_DEFAULT_OPUS_MODEL` (Claude Code only) |
+| `--sonnet-model` | No | `claude-code/claude-sonnet` | Model ID written to `ANTHROPIC_DEFAULT_SONNET_MODEL` (Claude Code only) |
+| `--haiku-model` | No | `claude-code/claude-haiku` | Model ID written to `ANTHROPIC_DEFAULT_HAIKU_MODEL` (Claude Code only) |
+| `--settings-file` | No | — | Path to a JSON template for `managed-settings.json` (Claude Code only). Patches token and model IDs; all other keys are preserved. Falls back to the existing file on disk, then the built-in default. |
+| `--refresh-token-file` | No | `~/.tf/refresh-token` | Path where the refresh token is stored (0600, owner-only). Also read on startup to attempt a silent refresh. Written in the logged-in user's session. |
+| `--access-token-file` | No | `~/.tf/access-token` | Path where the freshly obtained access token (JWT) is stored (0600, owner-only). Written in the logged-in user's session. |
+| `--dry-run` | No | `false` | Print the resulting config to stdout instead of writing any files. Works for both Claude Code and Codex. |
 
 ### Default config
 
@@ -104,6 +110,29 @@ When no `--settings-file` is provided and no `managed-settings.json` exists on d
 ```
 
 Use `--dry-run` to inspect the exact output before deploying to a fleet.
+
+### Codex default config
+
+When `--codex` is set (or Codex is auto-detected), the binary writes `/etc/codex/config.toml` with just the provider section. Model selection and all other settings come from the user's own config or a separately managed `requirements.toml`.
+
+```toml
+model_provider = "truefoundry"
+
+[model_providers.truefoundry]
+name     = "TrueFoundry Gateway"
+base_url = "<value of --gateway>"
+wire_api = "responses"
+
+[model_providers.truefoundry.http_headers]
+Authorization = "Bearer <token>"
+```
+
+**Codex config paths:**
+
+| OS | Path |
+|----|------|
+| macOS + Linux | `/etc/codex/config.toml` |
+| Windows | Not supported (no system-level config path) |
 
 ### Exit codes
 
@@ -395,7 +424,7 @@ After writing, the binary locks the file against modifications by non-root/non-a
 
 **Browser login appears on every MDM run**
 
-The device-flow browser prompt should only appear on the first run or when the refresh token at `~/.tfy-refresh-token` expires. If it appears on every run, the token is not being persisted — check that the MDM script re-execs the binary as the logged-in user (not as root) and that the user's home directory is writable.
+The device-flow browser prompt should only appear on the first run or when the refresh token at `~/.tf/refresh-token` expires. If it appears on every run, the token is not being persisted — check that the MDM script re-execs the binary as the logged-in user (not as root) and that the user's home directory is writable.
 
 **I accidentally closed the browser login window**
 
