@@ -11,7 +11,7 @@ A single binary that handles everything needed to configure Claude Code on a man
 On every run the binary does four things:
 
 1. **Detects the logged-in user** — platform-specific: `scutil` on macOS, `SUDO_USER`/`logname` on Linux, WMI on Windows.
-2. **Gets a fresh auth token** — attempts a silent refresh from `~/.tfy-refresh-token`. If the token is missing or expired, opens the browser device-authorization flow in the user's session. After the first login, subsequent runs complete silently.
+2. **Gets a fresh auth token** — attempts a silent refresh from `~/.tf/refresh-token`. If the token is missing or expired, opens the browser device-authorization flow in the user's session. After the first login, subsequent runs complete silently. The obtained access token and refresh token are stored under `~/.tf/`.
 3. **Writes `managed-settings.json`** — injects `ANTHROPIC_BASE_URL`, model IDs, and the token into `ANTHROPIC_CUSTOM_HEADERS`. If a file already exists on disk (or a `--settings-file` template is provided), it is patched in-place — all other keys are preserved. If there is no existing file, a secure default config is written.
 4. **Locks the file** — `chflags schg` on macOS, `chattr +i` on Linux, `icacls` ACL on Windows. Developers cannot modify the file without root/Administrator access.
 
@@ -67,8 +67,8 @@ tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 | `--sonnet-model` | No | `claude-code/claude-sonnet` | Model ID written to `ANTHROPIC_DEFAULT_SONNET_MODEL` (Claude Code only) |
 | `--haiku-model` | No | `claude-code/claude-haiku` | Model ID written to `ANTHROPIC_DEFAULT_HAIKU_MODEL` (Claude Code only) |
 | `--settings-file` | No | — | Path to a JSON template for `managed-settings.json` (Claude Code only). Patches token and model IDs; all other keys are preserved. Falls back to the existing file on disk, then the built-in default. |
-| `--refresh-token-file` | No | `~/.tfy-refresh-token` | Path where the refresh token is stored (0600, owner-only). Also read on startup to attempt a silent refresh. Written in the logged-in user's session. |
-| `--access-token-file` | No | `~/.tfy-access-token` | Path where the freshly obtained access token (JWT) is stored (0600, owner-only). Written in the logged-in user's session. |
+| `--refresh-token-file` | No | `~/.tf/refresh-token` | Path where the refresh token is stored (0600, owner-only). Also read on startup to attempt a silent refresh. Written in the logged-in user's session. |
+| `--access-token-file` | No | `~/.tf/access-token` | Path where the freshly obtained access token (JWT) is stored (0600, owner-only). Written in the logged-in user's session. |
 | `--dry-run` | No | `false` | Print the resulting config to stdout instead of writing any files. Works for both Claude Code and Codex. |
 
 ### Default config
@@ -424,7 +424,7 @@ After writing, the binary locks the file against modifications by non-root/non-a
 
 **Browser login appears on every MDM run**
 
-The device-flow browser prompt should only appear on the first run or when the refresh token at `~/.tfy-refresh-token` expires. If it appears on every run, the token is not being persisted — check that the MDM script re-execs the binary as the logged-in user (not as root) and that the user's home directory is writable.
+The device-flow browser prompt should only appear on the first run or when the refresh token at `~/.tf/refresh-token` expires. If it appears on every run, the token is not being persisted — check that the MDM script re-execs the binary as the logged-in user (not as root) and that the user's home directory is writable.
 
 **I accidentally closed the browser login window**
 
