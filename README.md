@@ -67,6 +67,8 @@ tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 | `--sonnet-model` | No | `claude-code/claude-sonnet` | Model ID written to `ANTHROPIC_DEFAULT_SONNET_MODEL` (Claude Code only) |
 | `--haiku-model` | No | `claude-code/claude-haiku` | Model ID written to `ANTHROPIC_DEFAULT_HAIKU_MODEL` (Claude Code only) |
 | `--settings-file` | No | — | Path to a JSON template for `managed-settings.json` (Claude Code only). Patches token and model IDs; all other keys are preserved. Falls back to the existing file on disk, then the built-in default. |
+| `--refresh-token-file` | No | `~/.tfy-refresh-token` | Path where the refresh token is stored (0600, owner-only). Also read on startup to attempt a silent refresh. Written in the logged-in user's session. |
+| `--access-token-file` | No | `~/.tfy-access-token` | Path where the freshly obtained access token (JWT) is stored (0600, owner-only). Written in the logged-in user's session. |
 | `--dry-run` | No | `false` | Print the resulting config to stdout instead of writing any files. Works for both Claude Code and Codex. |
 
 ### Default config
