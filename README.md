@@ -1,6 +1,6 @@
 # tfy-local-ai-setup
 
-Tools for deploying TrueFoundry-managed Claude Code on developer machines via MDM (Mobile Device Management).
+Tools for deploying TrueFoundry-managed AI clients — **Claude Code**, **Codex**, and **Claude Desktop (Cowork on 3P)** — on developer machines via MDM (Mobile Device Management).
 
 ## tfy-local-ai-setup
 
@@ -63,6 +63,12 @@ tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 | `--codex` | No | auto-detect | Configure Codex managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
 | `--claude-gateway` | No | value of `--gateway` | Gateway URL for Claude Code (written to `ANTHROPIC_BASE_URL`). Overrides `--gateway` for Claude Code only. |
 | `--codex-gateway` | No | value of `--gateway` | Gateway URL for Codex (written to `base_url` in the provider config). Defaults to `--gateway`. |
+| `--claude-desktop` | No | auto-detect | Configure Claude Desktop (Cowork 3P) managed preferences. If none of `--claude-code` / `--codex` / `--claude-desktop` is set, the binary auto-detects which are installed. |
+| `--claude-desktop-gateway` | No | value of `--gateway` | Gateway URL for Claude Desktop (written to `inferenceGatewayBaseUrl`). Overrides `--gateway` for Claude Desktop only. |
+| `--desktop-opus-model` | No | value of `--opus-model` | Opus model ID for Claude Desktop (`inferenceModels`). Inherits the Claude Code opus model unless overridden. |
+| `--desktop-sonnet-model` | No | value of `--sonnet-model` | Sonnet model ID for Claude Desktop (`inferenceModels`). Inherits the Claude Code sonnet model unless overridden. |
+| `--desktop-haiku-model` | No | value of `--haiku-model` | Haiku model ID for Claude Desktop (`inferenceModels`). Inherits the Claude Code haiku model unless overridden. |
+| `--desktop-header` | No | — | Extra custom header for Claude Desktop as `Name: Value`, written to `inferenceCustomHeaders`. Repeatable — pass it multiple times for multiple headers. |
 | `--opus-model` | No | `claude-code/claude-opus` | Model ID written to `ANTHROPIC_DEFAULT_OPUS_MODEL` (Claude Code only) |
 | `--sonnet-model` | No | `claude-code/claude-sonnet` | Model ID written to `ANTHROPIC_DEFAULT_SONNET_MODEL` (Claude Code only) |
 | `--haiku-model` | No | `claude-code/claude-haiku` | Model ID written to `ANTHROPIC_DEFAULT_HAIKU_MODEL` (Claude Code only) |
@@ -134,6 +140,77 @@ Authorization = "Bearer <token>"
 | macOS + Linux | `/etc/codex/config.toml` |
 | Windows | Not supported (no system-level config path) |
 
+### Claude Desktop (Cowork on 3P)
+
+When `--claude-desktop` is set (or Claude Desktop is auto-detected), the binary writes the
+[`com.anthropic.claudefordesktop`](https://claude.com/docs/cowork/3p/configuration) managed
+preferences that point Claude Desktop's **Cowork on 3P** mode at the TrueFoundry gateway. Every
+value is stored as a string; arrays and objects are JSON-encoded strings, as required by Anthropic's
+configuration reference.
+
+The auth token is delivered in the **`X-TFY-API-KEY`** header via `inferenceCustomHeaders` — the same
+mechanism Claude Code uses via `ANTHROPIC_CUSTOM_HEADERS`. (`inferenceGatewayApiKey` is also set to the
+token so the app's gateway mode is enabled; the gateway authenticates via either.) The model picker is
+pinned to the explicit list and `modelDiscoveryEnabled` is set to `false`, so Claude Desktop never
+auto-discovers models via the gateway's `GET /v1/models`.
+
+**Claude Desktop config paths:**
+
+| OS | Path | Lock |
+|----|------|------|
+| macOS | `/Library/Managed Preferences/<user>/com.anthropic.claudefordesktop.plist` | `chflags schg` (immutable) |
+| Windows | `HKLM\SOFTWARE\Policies\Claude` (string values) | admin-only hive |
+| Linux | Not supported (Claude Desktop 3P does not run on Linux) | — |
+
+Example generated plist (macOS), with a model list and an extra custom header via
+`--desktop-header 'X-TFY-METADATA: {"team":"platform"}'`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>inferenceProvider</key>
+  <string>gateway</string>
+  <key>inferenceGatewayBaseUrl</key>
+  <string>https://gateway.example.truefoundry.com/api/llm</string>
+  <key>inferenceGatewayAuthScheme</key>
+  <string>bearer</string>
+  <key>inferenceGatewayApiKey</key>
+  <string>&lt;token&gt;</string>
+  <key>inferenceCustomHeaders</key>
+  <string>{"X-TFY-API-KEY":"&lt;token&gt;","X-TFY-METADATA":"{\"team\":\"platform\"}"}</string>
+  <key>modelDiscoveryEnabled</key>
+  <string>false</string>
+  <key>inferenceModels</key>
+  <string>[{"name":"claude-code/claude-opus","anthropicFamilyTier":"opus","isFamilyDefault":true}, ...]</string>
+</dict>
+</plist>
+```
+
+Each `--desktop-*-model` flag defaults to the corresponding Claude Code model flag
+(`--opus-model` / `--sonnet-model` / `--haiku-model`), so Claude Desktop uses the same models you
+configure for Claude Code unless you override a specific one. The picker is pinned to this explicit
+list and `modelDiscoveryEnabled` is set to `false`, so Claude Desktop does **not** auto-discover
+models from the gateway's `GET /v1/models`. Override the desktop flags for a direct provider or
+Claude Enterprise account.
+
+```bash
+sudo /usr/local/bin/tfy-local-ai-setup \
+  --url="https://app.example.truefoundry.com" \
+  --tenant="myorg" \
+  --gateway="https://gateway.example.truefoundry.com/api/llm" \
+  --claude-desktop \
+  --desktop-opus-model="tfy-ai-anthropic/claude-opus-4-6" \
+  --desktop-sonnet-model="tfy-ai-anthropic/claude-sonnet-4-6" \
+  --desktop-haiku-model="tfy-ai-anthropic/claude-haiku-4-5" \
+  --desktop-header='X-TFY-METADATA: {"team":"platform"}'
+```
+
+Claude Desktop loads managed preferences at launch — **restart Claude Desktop** after a run for
+changes to take effect. To verify what the app picked up, use **Help → Troubleshooting → Copy
+Managed Configuration Report** (secrets redacted).
+
 ### Exit codes
 
 | Code | Meaning |
@@ -146,6 +223,8 @@ Authorization = "Bearer <token>"
 ## MDM deployment
 
 The recommended approach is to deploy a thin wrapper script via your MDM that downloads the correct binary for the platform (once, or when a new release tag is available) and runs it. Schedule the script to run hourly so the token stays fresh.
+
+The wrapper scripts below don't pass `--claude-code` / `--codex` / `--claude-desktop`, so the binary **auto-detects** which clients are installed and configures each of them. To configure Claude Desktop with a pinned model list or extra custom headers, add the `--claude-desktop` and `--desktop-*` flags to the run command (see [Claude Desktop (Cowork on 3P)](#claude-desktop-cowork-on-3p)).
 
 ### macOS (Jamf / Mosyle / Kandji)
 
@@ -172,7 +251,7 @@ TENANT_NAME="<your-tenant-name>"
 # SETTINGS_FILE="/etc/tfy/base-settings.json"
 
 BINARY_PATH="/usr/local/bin/tfy-local-ai-setup"
-RELEASE_TAG="v1.0.1"
+RELEASE_TAG="v1.2.0"
 RELEASE_BASE="https://github.com/truefoundry/tfy-local-ai-setup/releases/download/${RELEASE_TAG}"
 VERSION_FILE="${BINARY_PATH}.version"
 
@@ -235,7 +314,7 @@ TENANT_NAME="<your-tenant-name>"
 # SETTINGS_FILE="/etc/tfy/base-settings.json"
 
 BINARY_PATH="/usr/local/bin/tfy-local-ai-setup"
-RELEASE_TAG="v1.0.1"
+RELEASE_TAG="v1.2.0"
 BINARY_URL="https://github.com/truefoundry/tfy-local-ai-setup/releases/download/${RELEASE_TAG}/tfy-local-ai-setup-linux-amd64"
 VERSION_FILE="${BINARY_PATH}.version"
 
@@ -293,7 +372,7 @@ $TenantName      = "<your-tenant-name>"
 
 $BinaryDir   = "C:\Program Files\TrueFoundry"
 $BinaryPath  = "$BinaryDir\tfy-local-ai-setup.exe"
-$ReleaseTag  = "v1.0.1"
+$ReleaseTag  = "v1.2.0"
 $BinaryUrl   = "https://github.com/truefoundry/tfy-local-ai-setup/releases/download/$ReleaseTag/tfy-local-ai-setup-windows-amd64.exe"
 $VersionFile = "$BinaryPath.version"
 
