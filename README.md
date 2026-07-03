@@ -8,12 +8,13 @@ A single binary that handles everything needed to configure Claude Code on a man
 
 ### How it works
 
-On every run the binary does four things:
+On every run the binary does five things:
 
-1. **Detects the logged-in user** — platform-specific: `scutil` on macOS, `SUDO_USER`/`logname` on Linux, WMI on Windows.
-2. **Gets a fresh auth token** — attempts a silent refresh from `~/.tf/refresh-token`. If the token is missing or expired, opens the browser device-authorization flow in the user's session. After the first login, subsequent runs complete silently. The obtained access token and refresh token are stored under `~/.tf/`.
-3. **Writes `managed-settings.json`** — injects `ANTHROPIC_BASE_URL`, model IDs, and the token into `ANTHROPIC_CUSTOM_HEADERS`. If a file already exists on disk (or a `--settings-file` template is provided), it is patched in-place — all other keys are preserved. If there is no existing file, a secure default config is written.
-4. **Locks the file** — `chflags schg` on macOS, `chattr +i` on Linux, `icacls` ACL on Windows. Developers cannot modify the file without root/Administrator access.
+1. **Decides which tools to configure** — with no tool flag it auto-detects what is installed (`claude`/`codex` on `PATH`, `Claude.app` / registry for Claude Desktop); with explicit flags it honors each, but only for tools that are actually installed. A tool is **never** configured if it is not installed — an explicitly-requested-but-absent tool is skipped with a warning. If nothing is left to configure, the binary exits **0 immediately** (no token fetch, no login popup) so hourly MDM runs on machines without any AI client are a clean no-op.
+2. **Detects the logged-in user** — platform-specific: `scutil` on macOS, `SUDO_USER`/`logname` on Linux, WMI on Windows.
+3. **Gets a fresh auth token** — attempts a silent refresh from `~/.tf/refresh-token`. If the token is missing or expired, opens the browser device-authorization flow in the user's session. After the first login, subsequent runs complete silently. The obtained access token and refresh token are stored under `~/.tf/`.
+4. **Writes `managed-settings.json`** — injects `ANTHROPIC_BASE_URL`, model IDs, and the token into `ANTHROPIC_CUSTOM_HEADERS`. If a file already exists on disk (or a `--settings-file` template is provided), it is patched in-place — all other keys are preserved. If there is no existing file, a secure default config is written.
+5. **Locks the file** — `chflags schg` on macOS, `chattr +i` on Linux, `icacls` ACL on Windows. Developers cannot modify the file without root/Administrator access.
 
 ### Destination paths
 
@@ -59,11 +60,11 @@ tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 | `--url` | **Yes** | — | Base URL of the TrueFoundry control plane (e.g. `https://app.example.truefoundry.com`) |
 | `--tenant` | **Yes** | — | Your TrueFoundry tenant name |
 | `--gateway` | No | value of `--url` | Common gateway URL for all tools. Used as the default for `--claude-gateway` and `--codex-gateway` if neither is set. |
-| `--claude-code` | No | auto-detect | Configure Claude Code managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
-| `--codex` | No | auto-detect | Configure Codex managed settings. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. |
+| `--claude-code` | No | auto-detect | Configure Claude Code managed settings **if it is installed**. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. An explicit `--claude-code` on a machine without Claude Code is skipped with a warning — no file is written. |
+| `--codex` | No | auto-detect | Configure Codex managed settings **if it is installed**. If neither `--claude-code` nor `--codex` is set, the binary auto-detects which tools are installed. An explicit `--codex` on a machine without Codex is skipped with a warning — no file is written. |
 | `--claude-gateway` | No | value of `--gateway` | Gateway URL for Claude Code (written to `ANTHROPIC_BASE_URL`). Overrides `--gateway` for Claude Code only. |
 | `--codex-gateway` | No | value of `--gateway` | Gateway URL for Codex (written to `base_url` in the provider config). Defaults to `--gateway`. |
-| `--claude-desktop` | No | auto-detect | Configure Claude Desktop (Cowork 3P) managed preferences. If none of `--claude-code` / `--codex` / `--claude-desktop` is set, the binary auto-detects which are installed. |
+| `--claude-desktop` | No | auto-detect | Configure Claude Desktop (Cowork 3P) managed preferences **if it is installed**. If none of `--claude-code` / `--codex` / `--claude-desktop` is set, the binary auto-detects which are installed. An explicit `--claude-desktop` on a machine without Claude Desktop is skipped with a warning — no preferences are written. |
 | `--claude-desktop-gateway` | No | value of `--gateway` | Gateway URL for Claude Desktop (written to `inferenceGatewayBaseUrl`). Overrides `--gateway` for Claude Desktop only. |
 | `--desktop-opus-model` | No | value of `--opus-model` | Opus model ID for Claude Desktop (`inferenceModels`). Inherits the Claude Code opus model unless overridden. |
 | `--desktop-sonnet-model` | No | value of `--sonnet-model` | Sonnet model ID for Claude Desktop (`inferenceModels`). Inherits the Claude Code sonnet model unless overridden. |
@@ -215,7 +216,7 @@ Managed Configuration Report** (secrets redacted).
 
 | Code | Meaning |
 |------|---------|
-| `0` | Success |
+| `0` | Success — configured every installed tool, **or** nothing was installed to configure (clean no-op) |
 | `1` | Error — details printed to stderr |
 
 ---
