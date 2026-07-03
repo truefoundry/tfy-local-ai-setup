@@ -77,6 +77,8 @@ tfy-local-ai-setup --url <control-plane-url> --tenant <tenant-name> [flags]
 | `--refresh-token-file` | No | `~/.tf/refresh-token` | Path where the refresh token is stored (0600, owner-only). Also read on startup to attempt a silent refresh. Written in the logged-in user's session. |
 | `--access-token-file` | No | `~/.tf/access-token` | Path where the freshly obtained access token (JWT) is stored (0600, owner-only). Written in the logged-in user's session. |
 | `--dry-run` | No | `false` | Print the resulting config to stdout instead of writing any files. Works for both Claude Code and Codex. |
+| `--log-file` | No | — | Also append all log output to this file (0600). Useful for headless MDM runs where there is no console to read. |
+| `--debug` | No | `false` | Verbose debug logging. Surfaces the device-login browser URL and streams the (Windows) device-login child process output, and keeps the child log file for inspection. |
 
 ### Default config
 
