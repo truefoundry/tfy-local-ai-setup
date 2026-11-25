@@ -1,0 +1,361 @@
+# MDM setup: core settings active, advanced settings commented out.
+# Preview (no managed files written):
+#   sudo tfy-local-ai-setup --config=/path/to/mdm-reference.toml --dry-run
+# Apply after replacing example URLs, tenant, client ID and model IDs:
+#   sudo tfy-local-ai-setup --config=/path/to/mdm-reference.toml
+# Windows: run from an Administrator terminal; omit sudo.
+# Explicit CLI flags override file values. Unknown TOML keys are rejected.
+# TOML and JSON are supported. MDM does not load ~/.tf/config.toml.
+# This is input to --config, not the generated agents-policy.json.
+# Never put access tokens, refresh tokens or OIDC client secrets here.
+# Keep the binary and this input at stable, administrator-owned absolute paths.
+# Schedule your MDM wrapper to rerun setup for credential refresh/reconciliation.
+
+# TrueFoundry control plane, tenant, and inference gateway.
+url = "https://control-plane.example.com"
+tenant = "my-tenant"
+gateway = "https://gateway.example.com"
+
+# Explicit selection avoids auto-detecting the three primary clients.
+# Use canonical IDs. Add optional agents below to this list to deploy them.
+# All IDs: claude-code, codex, claude-desktop, opencode, qwen-code,
+# grok-build, pi, gemini-cli, copilot-cli, goose, vscode, cursor.
+# Claude Desktop is supported on macOS/Windows, not Linux.
+# Cursor supports MCPs/skills here, not gateway inference configuration.
+tools = ["claude-code", "codex", "claude-desktop"]
+# Omitting tools auto-detects primary clients; tools = [] selects none.
+
+# ADVANCED: behavior when device login fails. Default: write nothing, exit 1.
+# This fallback still returns failure; it does not bypass discovery errors.
+# [execution]
+# write_config_on_login_failure = true
+# placeholder_token = "TFY_PLACEHOLDER_LOGIN_REQUIRED"
+
+# ADVANCED: Cursor event monitoring, independently of model routing.
+# enabled = false removes this setup's monitoring hooks.
+# require_login = true blocks agent prompts/tools without an MDM credential.
+# [monitoring.cursor]
+# enabled = true
+# require_login = true
+
+[auth]
+# Shared default: "api-key" (default when omitted) or "oidc".
+# api-key uses per-user TrueFoundry authentication, not a literal key here.
+# Primary clients can override this in their [agents.*] section.
+# All selected additional agents must resolve to the SAME auth mode.
+mode = "oidc"
+
+# ADVANCED alternative: deferred PAT onboarding. Requires mode = "api-key" and
+# compatible selected agent auth modes; do not combine with OIDC mode.
+# Scheduled MDM runs save policy without opening the browser; user runs:
+#   tfy-local-ai-setup login --mdm
+# login = "manual"
+# Optional owning team for the PAT, used by manual PAT onboarding.
+# pat_team = "engineering"
+# Optional (manual login or auto_renew): days each user's PAT lasts (7–3650, default 365). Existing
+# PATs keep their date until they are next renewed.
+# pat_expiry_days = 90
+# Optional: keep each user's PAT renewed before it expires, from the scheduled
+# run, with no browser. Off by default. With login = "manual" it renews the PAT
+# the user made with login --mdm. Without it (device login, api-key mode), the
+# run turns its own sign-in into the user's PAT, which replaces the refresh
+# token: a long-lived key instead of hour-long tokens.
+# auto_renew = true
+
+[auth.oidc]
+# Required when configuring OIDC clients. Public-client auth; no client secret.
+# Code/Codex use our helper; Desktop uses its native OIDC implementation.
+issuer = "https://idp.example.com/my-tenant"
+client_id = "YOUR_PUBLIC_OIDC_CLIENT_ID"
+
+# Model configuration written by this setup (not a limit on the client itself):
+# - Codex: one default model, using agents.codex.model.
+# - Gemini CLI and Copilot CLI: one resolved default; extra models list entries
+#   are not registered as selectable models in the generated client config.
+# - VS Code, OpenCode, Qwen Code, Grok Build, Pi and Goose: multiple models,
+#   with a default selected from the list.
+# - Claude Code and Claude Desktop: one model for each Opus/Sonnet/Haiku tier.
+# - Cursor: no model settings; only MCP servers and skills are configured.
+
+[defaults]
+# Shared model list for additional agents that support a model picker.
+# These are gateway model/Virtual Model IDs, not provider display names.
+# Claude tiers and Codex use the per-agent fields below instead.
+models = ["my-chat-model", "my-reasoning-model"]
+# If omitted, model-list agents normally use the first model.
+default_model = "my-chat-model"
+
+[mcp]
+# Gateway-registered MCP names. Empty means no shared explicit servers.
+servers = []
+# Example: replace the line above with:
+# servers = ["github", "slack", "deepwiki"]
+# Alternative: discover all servers accessible to the signed-in user.
+# Cannot combine discovery with a NONEMPTY servers list.
+# Scheduled discovery silently reuses credentials; it does not open a browser.
+# discovery = "all-accessible"
+# Per-agent mcp_servers below replaces the shared choice; [] disables it.
+# [[mcp.custom]] is parsed by shared settings code but is not propagated
+# through the MDM policy. Do not use it to deploy custom servers via --config.
+
+[skills]
+# TrueFoundry Skills Registry refs: [repo/]name[:version].
+# Pin :version for a fixed rollout; omit it to follow the latest version.
+names = []
+# Example replacement:
+# names = ["my-repo/my-skill:1", "another-skill"]
+# Alternative: install all accessible published skills, following latest versions.
+# Cannot combine with nonempty names, --skill, or --no-skills.
+# Discovery silently reuses credentials; failures preserve current skills.
+# Per-agent skills overrides still apply; Desktop ZIPs require manual upload.
+# discovery = "all-accessible"
+
+[agents.claude-code]
+# One model per tier: Opus, Sonnet and Haiku; no models list.
+# Optional override of auth.mode: "oidc" or "api-key".
+# auth = "oidc"
+# Gateway model IDs for Claude's three model tiers.
+opus_model = "claude-code/claude-opus"
+sonnet_model = "claude-code/claude-sonnet"
+haiku_model = "claude-code/claude-haiku"
+# More models offered in /model, after the tier models (any gateway model,
+# Claude or not). /model then lists only the tier and additional models.
+# additional_models = ["tfy-ai-anthropic/claude-opus-5-5", "tfy-ai-openai/gpt-5.5"]
+# or ["@all"]: every chat model the user can access, read on each MDM run.
+# Unset inherits the shared MCP/skills lists; [] disables them for this agent.
+# mcp_servers = ["github", "deepwiki"]
+# skills = ["my-repo/my-skill:1"]
+# ADVANCED: override the shared inference gateway for this client.
+# gateway = "https://claude-gateway.example.com"
+
+# ADVANCED: inline Claude Code managed-settings template.
+# Accepts the client's extensible JSON setting names, including nested tables.
+# Setup patches gateway/auth/models/MCP entries into this base.
+# An explicit --settings-file takes precedence over this table; otherwise
+# this table replaces the existing on-disk base. Omit to reuse existing defaults.
+# [agents.claude-code.managed_settings]
+# allowManagedPermissionRulesOnly = true
+# allowManagedHooksOnly = true
+# transcriptRetentionDays = 14
+# strictKnownMarketplaces = []
+# [agents.claude-code.managed_settings.permissions]
+# disableBypassPermissionsMode = "disable"
+# deny = []
+# ask = ["Bash(git push:*)", "Edit(**)", "Read(**/.env)"]
+
+[agents.codex]
+# One configured default model; use model, not models/default_model.
+# Covers both the CLI and Codex desktop app.
+# auth = "oidc"
+# If omitted, no default Codex model is written by the legacy MDM writer.
+model = "my-chat-model"
+# mcp_servers = []
+# skills = []
+# ADVANCED: client-specific inference gateway.
+# gateway = "https://codex-gateway.example.com"
+# ADVANCED: JWT header style, "api-key" (default) or "chatgpt-subscription".
+# Subscription mode requires auth = "api-key" above, even if auth.mode is oidc.
+# Users also sign in to ChatGPT separately in Codex; TFY uses x-tfy-api-key.
+# auth_mode = "api-key"
+
+[agents.claude-desktop]
+# One model per tier: Opus, Sonnet and Haiku; no models list.
+# auth = "oidc"
+opus_model = "claude-code/claude-opus"
+sonnet_model = "claude-code/claude-sonnet"
+haiku_model = "claude-code/claude-haiku"
+# More models in Desktop's model menu; defaults to Claude Code's
+# additional_models. Desktop shows Claude models only and hides the rest.
+# additional_models = ["tfy-ai-anthropic/claude-opus-5-5"]
+# mcp_servers = ["deepwiki"]
+# skills = ["my-repo/my-skill:1"]
+# ADVANCED: client-specific inference gateway and managed app preferences.
+# gateway = "https://desktop-gateway.example.com"
+# tool_search_enabled = true
+# prefer_1m_context = true
+# Extra Desktop headers must currently use --desktop-header='Name: Value'.
+# Although mapped internally, the TOML headers option fails validation for
+# this agent in the current source version:
+# headers = ["X-Department: engineering"]
+
+# ADVANCED: per-tier capabilities, independent of model IDs. Only declare
+# capabilities the gateway model supports. prefer_1m requires supports_1m.
+# Unspecified tiers receive no extra metadata; tiers with no model are omitted.
+# Desktop uses metadata here, rather than Claude Code's [1m] model-ID suffix.
+# [agents.claude-desktop.context.opus]
+# supports_1m = true
+# prefer_1m = true
+# [agents.claude-desktop.context.sonnet]
+# supports_1m = true
+# prefer_1m = true
+# [agents.claude-desktop.context.haiku]
+# supports_1m = false
+# prefer_1m = false
+
+# ADVANCED: Claude Desktop history import (requires a compatible app and
+# workspace export permission). Terminal Claude Code history is not imported.
+# Options other than enabled take effect only when import is enabled.
+# [agents.claude-desktop.history_import]
+# enabled = true
+# encoding = "json-string" # json-string | native-dict (macOS); Windows uses JSON.
+# export_enabled = true
+# banner_behavior = "detect" # off | detect | show
+# automatic_3p = false
+
+# OPTIONAL AGENTS: uncomment the desired table/keys AND add its ID to tools.
+# Each supports auth = "api-key" or "oidc" (otherwise inherits auth.mode).
+# Additional agents share one credential-helper auth mode: do not mix modes
+# across opencode, qwen-code, grok-build, pi, gemini-cli, copilot-cli,
+# goose, vscode and cursor in one run.
+# Each supports mcp_servers and skills: omitted inherits, [] disables.
+# Model-list agents support models and default_model; a per-agent models
+# list replaces defaults.models. Its default_model must be in that list.
+# Only use the extra options shown for that agent; other options are rejected.
+# All additional-agent tables are optional and commented out below.
+# In each table, headers/API/token limits/provider controls are advanced settings.
+
+# [agents.opencode]
+# Multiple models are registered; default_model selects the starting model.
+# auth = "oidc"
+# models = ["my-chat-model", "my-reasoning-model"]
+# default_model = "my-chat-model"
+# mcp_servers = ["github"]
+# skills = ["my-repo/my-skill:1"]
+# Extra inference request headers, formatted as "Name: Value".
+# headers = ["X-Department: engineering"]
+# Declared context and maximum output sizes, in tokens.
+# context_window = 128000
+# max_tokens = 16000
+# Hide other providers in OpenCode's generated configuration.
+# gateway_only = true
+
+# [agents.qwen-code]
+# Multiple models are registered; default_model selects the starting model.
+# auth = "oidc"
+# models = ["my-chat-model", "my-reasoning-model"]
+# default_model = "my-chat-model"
+# mcp_servers = []
+# skills = []
+# Wire protocol: "chat-completions" or "responses".
+# api = "chat-completions"
+# headers = ["X-Department: engineering"]
+# context_window = 128000
+
+# [agents.grok-build]
+# Multiple models are registered; default_model selects the starting model.
+# auth = "oidc"
+# models = ["my-chat-model", "my-reasoning-model"]
+# default_model = "my-chat-model"
+# mcp_servers = []
+# skills = []
+# Wire protocol: "chat_completions", "responses", or "messages".
+# api = "chat_completions"
+# headers = ["X-Department: engineering"]
+# context_window = 128000
+# max_tokens = 16000
+
+# [agents.pi]
+# Multiple models are registered; default_model selects the starting model.
+# auth = "oidc"
+# models = ["my-chat-model", "my-reasoning-model"]
+# default_model = "my-chat-model"
+# mcp_servers = []
+# skills = []
+# Wire protocol: "openai-completions", "openai-responses",
+# or "anthropic-messages".
+# api = "openai-completions"
+# headers = ["X-Department: engineering"]
+# context_window = 128000
+# max_tokens = 16000
+
+# [agents.gemini-cli]
+# Only the resolved default is written to model.name; extra models list
+# entries are not registered as a model catalog.
+# auth = "oidc"
+# models = ["my-gemini-model"]
+# default_model = "my-gemini-model"
+# mcp_servers = []
+# skills = []
+# Required for native Gemini routing through:
+# <gateway>/gemini/<provider-account>/proxy
+# provider_account = "my-gemini-provider-account"
+# headers = ["X-Department: engineering"]
+
+# [agents.copilot-cli]
+# Only the resolved default is written to COPILOT_MODEL; extra models
+# list entries are not registered as a model catalog.
+# auth = "oidc"
+# models = ["my-chat-model"]
+# default_model = "my-chat-model"
+# mcp_servers = []
+# skills = []
+# Wire protocol: "completions" or "responses".
+# api = "completions"
+# headers = ["X-Department: engineering"]
+# context_window = 128000
+# max_tokens = 16000
+
+# [agents.goose]
+# Multiple models are registered; default_model selects the starting model.
+# auth = "oidc"
+# models = ["my-chat-model", "my-reasoning-model"]
+# default_model = "my-chat-model"
+# mcp_servers = []
+# skills = []
+# headers = ["X-Department: engineering"]
+# context_window = 128000
+
+# [agents.vscode]
+# Multiple models are offered through the Custom Endpoint or TFY extension.
+# auth = "oidc"
+# models = ["my-chat-model", "my-reasoning-model"]
+# default_model = "my-chat-model"
+# mcp_servers = []
+# skills = []
+# Wire protocol: "chat-completions", "responses", or "messages".
+# api = "chat-completions"
+# headers = ["X-Department: engineering"]
+# context_window = 128000
+# max_tokens = 16000
+# Background-task model: "mainAgent" (gateway chat model), "copilot", "none".
+# utility_model = "mainAgent"
+# Configure VS Code Insiders instead of stable VS Code.
+# insiders = false
+
+# [agents.cursor]
+# No model settings are written by this setup.
+# MCP and skills only; no gateway model settings supported here.
+# mcp_servers = ["deepwiki"]
+# skills = ["my-repo/my-skill:1"]
+
+# CLI-ONLY SETTINGS: these are NOT TOML keys. Pass as command-line flags.
+# --dry-run                         Preview generated configuration.
+# --log-file=/path/to/setup.log      Append logs (default: stderr only).
+# --debug                           Verbose diagnostics.
+# --refresh-token-file=/path        Override token-cache file for the run.
+# --access-token-file=/path         Override access-token cache for the run.
+# --settings-file=/path/settings.json  Claude Code managed-settings template.
+# --codex-settings-file=/path/config.toml  Codex managed-config template.
+# --desktop-header='Name: Value'     Extra Desktop inference header; repeatable.
+# --force-login-org=UUID             Restrict Desktop Claude org; repeatable.
+# --claude-desktop-allow-local-mcp=false  Disallow Desktop local stdio MCPs.
+# --disable-deployment-mode-chooser  Hide Desktop Claude.ai escape (OIDC only).
+# --oidc-scopes='openid profile email offline_access'  Desktop OIDC scopes.
+# --oidc-bearer-token-type=access_token  Desktop bearer token type (default).
+#                                   id_token is accepted by CLI but rejected
+#                                   by the TrueFoundry gateway.
+# --wsl                             Also deploy into user's WSL distros.
+# --no-mcp                          Suppress shared MCP list; per-agent survives.
+# --no-skills                       Remove MDM-installed skills, including per-agent.
+# --block-agent=claude-code          Block new prompts: claude-code/codex/cursor.
+# --unblock-agent=claude-code        Remove this setup's block for that agent.
+# --block-message='Contact IT'       Message displayed when prompts are blocked.
+# [restrictions] is not supported in standalone MDM --config; use these flags.
+# --agents-auth=oidc                Override additional agents' shared auth.
+# --agents-config is a separate input mode; cannot combine it with --config.
+# Settings that have TOML keys above also retain their CLI override flags:
+# --claude-gateway, --codex-gateway, --claude-desktop-gateway,
+# --codex-auth-mode, --claude-ai-import, --import-encoding,
+# --import-export-enabled, --import-banner-behavior, --import-automatic-3p,
+# --write-config-on-login-failure, --placeholder-token,
+# --cursor-monitoring and --cursor-require-login.
